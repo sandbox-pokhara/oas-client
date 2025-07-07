@@ -27,18 +27,30 @@ def render_client(spec: dict[str, Any], template_dir: Path) -> str:
             responses: dict[str, dict[str, Any]] = op.get("responses", {})
             for _, res in responses.items():
                 if "application/json" in res.get("content", {}):
-                    schema_ref = res["content"]["application/json"]["schema"][
-                        "$ref"
-                    ]
-                    schemas.append("responses." + schema_ref.split("/")[-1])
+                    try:
+                        schema_ref = res["content"]["application/json"][
+                            "schema"
+                        ]["$ref"]
+                        schemas.append(
+                            "responses." + schema_ref.split("/")[-1]
+                        )
+                    except KeyError:
+                        # TODO: support non $ref schemas
+                        schemas.append("Any")
 
             # Extract request body schema
             body = None
             if "requestBody" in op:
                 content = op["requestBody"].get("content", {})
                 if "application/json" in content:
-                    schema_ref = content["application/json"]["schema"]["$ref"]
-                    body = "requests." + schema_ref.split("/")[-1]
+                    try:
+                        schema_ref = content["application/json"]["schema"][
+                            "$ref"
+                        ]
+                        body = "requests." + schema_ref.split("/")[-1]
+                    except KeyError:
+                        # TODO: support non $ref schemas
+                        body = "Any"
 
             # Extract query/path parameters exists
             is_params = [
@@ -53,7 +65,7 @@ def render_client(spec: dict[str, Any], template_dir: Path) -> str:
                     "func_name": op_id,
                     "url": path,
                     "http_method": method,
-                    "return": " | ".join(schemas),
+                    "return": " | ".join(schemas) if schemas else "Any",
                     "body": body,
                     "params": (
                         "params." + to_pascal_case(op_id + "_params")
