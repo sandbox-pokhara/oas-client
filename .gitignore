@@ -133,3 +133,4 @@ dist
 # project specific
 /test.py
 /temp
+client/

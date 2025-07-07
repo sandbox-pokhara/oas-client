@@ -1,5 +1,3 @@
-import argparse
-import json
 from pathlib import Path
 from typing import Any
 
@@ -47,11 +45,9 @@ def resolve_type(prop: dict[str, Any]) -> tuple[str, list[tuple[str, str]]]:
     return "Any", [("typing", "Any")]
 
 
-def load_schemas(
-    openapi_path: str,
+def find_schemas(
+    spec: dict[str, Any],
 ) -> tuple[list[dict[str, Any]], set[tuple[str, str]]]:
-    with open(openapi_path, "r", encoding="utf-8") as f:
-        spec = json.load(f)
 
     schemas: dict[str, dict[str, Any]] = spec.get("components", {}).get(
         "schemas", {}
@@ -76,34 +72,12 @@ def load_schemas(
     return output, imports
 
 
-def render_typeddicts(
-    schemas: list[dict[str, Any]],
-    imports: set[tuple[str, str]],
-    template_path: Path,
-) -> str:
-    env = Environment(loader=FileSystemLoader(template_path))
-    template = env.get_template("typeddict.jinja2")
-    return template.render(schemas=schemas, imports=imports)
-
-
-def main(
-    openapi_path: str,
-    output_path: str,
-    template_dir: Path = BASE_DIR / "templates",
-):
-    schemas, imports = load_schemas(openapi_path)
-    output_code = render_typeddicts(schemas, imports, template_dir)
+def render_schemas(spec: dict[str, Any]) -> str:
+    schemas, imports = find_schemas(spec)
+    env = Environment(loader=FileSystemLoader(BASE_DIR / "templates"))
+    template = env.get_template("schemas.jinja2")
+    output_code = template.render(schemas=schemas, imports=imports)
     output_code = isort.code(output_code)
     mode = black.Mode()
     output_code = black.format_str(output_code, mode=mode)
-    Path(output_path).write_text(output_code)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Generate OpenAPI client from an OpenAPI JSON spec."
-    )
-    parser.add_argument("openapi_json", help="Path to the OpenAPI JSON file.")
-    parser.add_argument("output_py", help="Path to the output Python file.")
-    args = parser.parse_args()
-    main(args.openapi_json, args.output_py)
+    return output_code
