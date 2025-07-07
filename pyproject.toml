@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=70.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oas-client"
+requires-python = ">=3"
+authors = [
+  { name = "Pradish Bijukchhe", email = "pradish@sandbox.com.np" },
+]
+description = "Generate typed python client from OpenAPI specification"
+readme = "README.md"
+license = { file = "LICENSE" }
+keywords = []
+classifiers = ["Programming Language :: Python :: 3"]
+dependencies = []
+dynamic = ["version"]
+
+[project.optional-dependencies]
+pre-commit = ["pre-commit"]
+
+
+[project.urls]
+Homepage = "https://github.com/sandbox-pokhara/oas-client"
+Issues = "https://github.com/sandbox-pokhara/oas-client/issues"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-dir]
+"oas_client" = "oas_client"
+
+[tool.setuptools.dynamic]
+version = { attr = "oas_client.__version__" }
+
+[tool.isort]
+profile = "black"
+line_length = 79
+force_single_line = true
+
+[tool.black]
+line-length = 79
+preview = true
+enable-unstable-feature = ["string_processing"]
+
+[tool.pyright]
+venvPath = "."
+venv = "venv"
+include = ["oas_client", "test.py"]
+typeCheckingMode = "strict"
