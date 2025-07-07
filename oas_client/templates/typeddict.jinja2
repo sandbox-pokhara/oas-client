@@ -1,0 +1,13 @@
+{% for i in imports %}
+from {{ i[0] }} import {{ i[1] }}
+{% endfor %}
+{% for schema in schemas %}
+class {{ schema.name }}(TypedDict):
+{%- if schema.fields -%}
+{% for field in schema.fields %}
+    {{ field.name }}: {{ field.type }}
+{%- endfor %}
+{% else %}
+    pass
+{% endif %}
+{% endfor %}
