@@ -42,7 +42,11 @@ def render_schemas(
     NotRequired is only necessary for request body not responses
     """
     schemas, imports = find_schemas(spec, partial)
-    env = Environment(loader=FileSystemLoader(template_dir))
+    env = Environment(
+        loader=FileSystemLoader(template_dir),
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
     template = env.get_template("schemas.jinja2")
     output_code = template.render(schemas=schemas, imports=imports)
     return output_code

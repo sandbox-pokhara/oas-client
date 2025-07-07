@@ -4,11 +4,15 @@ from typing import Any
 from jinja2 import Environment
 from jinja2 import FileSystemLoader
 
-from oas_client.types import resolve_type
+from oas_client.utils import to_pascal_case
 
 
 def render_client(spec: dict[str, Any], template_dir: Path) -> str:
-    env = Environment(loader=FileSystemLoader(template_dir))
+    env = Environment(
+        loader=FileSystemLoader(template_dir),
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
     template = env.get_template("client.jinja2")
 
     paths: dict[str, dict[str, dict[str, Any]]] = spec.get("paths", {})
@@ -36,17 +40,13 @@ def render_client(spec: dict[str, Any], template_dir: Path) -> str:
                     schema_ref = content["application/json"]["schema"]["$ref"]
                     body = "requests." + schema_ref.split("/")[-1]
 
-            # Extract query/path/header parameters
-            parameters: list[dict[str, str]] = []
-            queries: list[dict[str, str]] = []
-            for param in op.get("parameters", []):
-                name = param["name"]
-                schema = param.get("schema", {})
-                typ, _ = resolve_type(schema)
-                if param["in"] == "path":
-                    parameters.append({"name": name, "type": typ})
-                if param["in"] == "query":
-                    queries.append({"name": name, "type": typ})
+            # Extract query/path parameters exists
+            is_params = [
+                p for p in op.get("parameters", []) if p["in"] == "path"
+            ] != []
+            is_query = [
+                p for p in op.get("parameters", []) if p["in"] == "query"
+            ] != []
 
             functions.append(
                 {
@@ -55,9 +55,16 @@ def render_client(spec: dict[str, Any], template_dir: Path) -> str:
                     "http_method": method,
                     "return": " | ".join(schemas),
                     "body": body,
-                    "parameters": parameters,
-                    "queries": queries,
+                    "params": (
+                        "params." + to_pascal_case(op_id + "_params")
+                        if is_params
+                        else None
+                    ),
+                    "query": (
+                        "queries." + to_pascal_case(op_id + "_query")
+                        if is_query
+                        else None
+                    ),
                 }
             )
-    # NOTE: typed parameter and queries are not implemented yet
     return template.render(functions=functions)

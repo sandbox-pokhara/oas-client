@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 
 from oas_client.client import render_client
+from oas_client.parameters import render_params
+from oas_client.parameters import render_queries
 from oas_client.schemas import render_schemas
 
 BASE_DIR = Path(__file__).parent
@@ -52,6 +54,8 @@ def main():
     (output_dir / "requests.py").write_text(
         render_schemas(spec, template_dir, partial=True)
     )
+    (output_dir / "queries.py").write_text(render_queries(spec, template_dir))
+    (output_dir / "params.py").write_text(render_params(spec, template_dir))
     (output_dir / "client.py").write_text(render_client(spec, template_dir))
 
     if not args.no_import_sorting:

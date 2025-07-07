@@ -4,6 +4,8 @@ from urllib.parse import urlencode
 
 import httpx
 
+from . import params
+from . import queries
 from . import requests
 from . import responses
 
@@ -20,18 +22,20 @@ class APIClient(httpx.Client):
         super().__init__(base_url=base_url, headers=headers, **kwargs)
 
     {% for func in functions %}
-    def {{ func.func_name }}(self{% if func.body %}, body: {{ func.body }}{% endif %}, params: dict[str, Any] | None = None, query: dict[str, Any] | None = None, **kwargs: Any) -> tuple[httpx.Response, {{ func.return }}]:
-        if params is None:
-            params = {}
-        if  query is None:
-            query = {}
+    def {{ func.func_name }}(self{% if func.params %}, params: {{ func.params }}{% endif %}{% if func.query %}, query: {{ func.query }}{% endif %}{% if func.body %}, body: {{ func.body }}{% endif %}, **kwargs: Any) -> tuple[httpx.Response, {{ func.return }}]:
         url = "{{ func.url }}"
+        {% if func.params %}
+        url = url.format(**params)
+        {% endif %}
+        {% if func.query %}
         if query:
             url += "?" + urlencode(query)
+        {% endif %}
         response = self.request(
             "{{ func.http_method }}",
-            url.format(**params){% if func.body %}, json=body{% endif %},
+            url{% if func.body %}, json=body{% endif %},
             **kwargs
         )
         return response, response.json()
+
     {% endfor %}
