@@ -1,0 +1,36 @@
+from typing import Any
+from urllib.parse import urlencode
+
+
+import httpx
+
+from . import schemas
+
+
+class APIClient(httpx.Client):
+    def __init__(self, base_url: str, token: str | None = None, **kwargs: Any):
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        super().__init__(base_url=base_url, headers=headers, **kwargs)
+
+    {% for func in functions %}
+    def {{ func.func_name }}(self{% if func.body %}, body: {{ func.body }}{% endif %}, params: dict[str, Any] | None = None, query: dict[str, Any] | None = None, **kwargs: Any) -> tuple[httpx.Response, {{ func.return }}]:
+        if params is None:
+            params = {}
+        if  query is None:
+            query = {}
+        url = "{{ func.url }}"
+        if query:
+            url += "?" + urlencode(query)
+        response = self.request(
+            "{{ func.http_method }}",
+            url.format(**params){% if func.body %}, json=body{% endif %},
+            **kwargs
+        )
+        return response, response.json()
+    {% endfor %}

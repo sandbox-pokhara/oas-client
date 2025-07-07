@@ -11,12 +11,14 @@ readme = "README.md"
 license = { file = "LICENSE" }
 keywords = []
 classifiers = ["Programming Language :: Python :: 3"]
-dependencies = ["black>=22.8.0", "isort>=5.10.1", "jinja2>=2.11.3"]
+dependencies = ["httpx>=0.22.0", "jinja2>=2.11.3"]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 pre-commit = ["pre-commit"]
 
+[project.scripts]
+oas-client = "oas_client.__main__:main"
 
 [project.urls]
 Homepage = "https://github.com/sandbox-pokhara/oas-client"

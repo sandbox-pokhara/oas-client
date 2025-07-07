@@ -12,10 +12,8 @@ pip install oas-client
 
 ## Usage
 
-```python
-import oas_client
-
-# usage examples here
+```
+oas-client <PATH>
 ```
 
 ## License
