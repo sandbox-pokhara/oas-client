@@ -26,7 +26,7 @@ def render_client(spec: dict[str, Any], template_dir: Path) -> str:
                     schema_ref = res["content"]["application/json"]["schema"][
                         "$ref"
                     ]
-                    schemas.append("schemas." + schema_ref.split("/")[-1])
+                    schemas.append("responses." + schema_ref.split("/")[-1])
 
             # Extract request body schema
             body = None
@@ -34,7 +34,7 @@ def render_client(spec: dict[str, Any], template_dir: Path) -> str:
                 content = op["requestBody"].get("content", {})
                 if "application/json" in content:
                     schema_ref = content["application/json"]["schema"]["$ref"]
-                    body = "schemas." + schema_ref.split("/")[-1]
+                    body = "requests." + schema_ref.split("/")[-1]
 
             # Extract query/path/header parameters
             parameters: list[dict[str, str]] = []

@@ -8,7 +8,7 @@ from oas_client.types import resolve_type
 
 
 def find_schemas(
-    spec: dict[str, Any],
+    spec: dict[str, Any], partial: bool = False
 ) -> tuple[list[dict[str, Any]], set[tuple[str, str]]]:
 
     schemas: dict[str, dict[str, Any]] = spec.get("components", {}).get(
@@ -24,7 +24,7 @@ def find_schemas(
         fields: list[dict[str, str]] = []
         for prop_name, prop in props.items():
             type_str, imps = resolve_type(prop)
-            if prop_name not in required:
+            if partial and prop_name not in required:
                 imports.add(("typing", "NotRequired"))
                 type_str = f"NotRequired[{type_str}]"
             fields.append({"name": prop_name, "type": type_str})
@@ -34,8 +34,14 @@ def find_schemas(
     return output, imports
 
 
-def render_schemas(spec: dict[str, Any], template_dir: Path) -> str:
-    schemas, imports = find_schemas(spec)
+def render_schemas(
+    spec: dict[str, Any], template_dir: Path, partial: bool = False
+) -> str:
+    """
+    When partial is set to true NotRequired is added to type when applicable,
+    NotRequired is only necessary for request body not responses
+    """
+    schemas, imports = find_schemas(spec, partial)
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template("schemas.jinja2")
     output_code = template.render(schemas=schemas, imports=imports)

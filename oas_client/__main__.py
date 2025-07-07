@@ -46,7 +46,12 @@ def main():
 
     os.makedirs(output_dir, exist_ok=True)
     (output_dir / "__init__.py").write_text("")
-    (output_dir / "schemas.py").write_text(render_schemas(spec, template_dir))
+    (output_dir / "responses.py").write_text(
+        render_schemas(spec, template_dir)
+    )
+    (output_dir / "requests.py").write_text(
+        render_schemas(spec, template_dir, partial=True)
+    )
     (output_dir / "client.py").write_text(render_client(spec, template_dir))
 
     if not args.no_import_sorting:
