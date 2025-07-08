@@ -3,10 +3,11 @@ import json
 import os
 from pathlib import Path
 
-from oas_client.client import render_client
-from oas_client.parameters import render_params
-from oas_client.parameters import render_queries
-from oas_client.schemas import render_schemas
+from oas_client.renderers.client import render_client
+from oas_client.renderers.params import render_params
+from oas_client.renderers.queries import render_queries
+from oas_client.renderers.requests import render_requests
+from oas_client.renderers.responses import render_responses
 
 BASE_DIR = Path(__file__).parent
 
@@ -47,16 +48,19 @@ def main():
         spec = json.load(f)
 
     os.makedirs(output_dir, exist_ok=True)
+
+    responses = render_responses(spec, template_dir)
+    requests = render_requests(spec, template_dir)
+    queries = render_queries(spec, template_dir)
+    params = render_params(spec, template_dir)
+    client = render_client(spec, template_dir)
+
     (output_dir / "__init__.py").write_text("")
-    (output_dir / "responses.py").write_text(
-        render_schemas(spec, template_dir)
-    )
-    (output_dir / "requests.py").write_text(
-        render_schemas(spec, template_dir, partial=True)
-    )
-    (output_dir / "queries.py").write_text(render_queries(spec, template_dir))
-    (output_dir / "params.py").write_text(render_params(spec, template_dir))
-    (output_dir / "client.py").write_text(render_client(spec, template_dir))
+    (output_dir / "responses.py").write_text(responses)
+    (output_dir / "requests.py").write_text(requests)
+    (output_dir / "queries.py").write_text(queries)
+    (output_dir / "params.py").write_text(params)
+    (output_dir / "client.py").write_text(client)
 
     if not args.no_import_sorting:
         try:

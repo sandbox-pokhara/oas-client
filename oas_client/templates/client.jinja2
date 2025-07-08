@@ -22,7 +22,7 @@ class APIClient(httpx.Client):
         super().__init__(base_url=base_url, headers=headers, **kwargs)
 
     {% for func in functions %}
-    def {{ func.func_name }}(self{% if func.params %}, params: {{ func.params }}{% endif %}{% if func.query %}, query: {{ func.query }}{% endif %}{% if func.body %}, body: {{ func.body }}{% endif %}, **kwargs: Any) -> tuple[httpx.Response, {{ func.return }}]:
+    def {{ func.func_name }}(self{% if func.params %}, params: {{ func.params }}{% endif %}{% if func.body %}, body: {{ func.body }}{% endif %}{% if func.query %}, query: {{ func.query }} | None = None{% endif %}, **kwargs: Any) -> tuple[httpx.Response, {{ func.return }}]:
         url = "{{ func.url }}"
         {% if func.params %}
         url = url.format(**params)
@@ -31,11 +31,12 @@ class APIClient(httpx.Client):
         if query:
             url += "?" + urlencode(query)
         {% endif %}
-        response = self.request(
+        res = self.request(
             "{{ func.http_method }}",
             url{% if func.body %}, json=body{% endif %},
             **kwargs
         )
-        return response, response.json()
+        res.raise_for_status()
+        return res, res.json()
 
     {% endfor %}
