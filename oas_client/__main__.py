@@ -1,7 +1,10 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
+
+import httpx
 
 from oas_client.renderers.client import render_client
 from oas_client.renderers.params import render_params
@@ -15,11 +18,17 @@ import subprocess
 from pathlib import Path
 
 
+def is_url(path: str) -> bool:
+    return re.match(r"^https?://", path) is not None
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate OpenAPI client from an OpenAPI JSON spec."
     )
-    parser.add_argument("openapi_json", help="Path to the OpenAPI JSON file.")
+    parser.add_argument(
+        "openapi_json", help="Path or URL to the OpenAPI JSON file."
+    )
     parser.add_argument(
         "--output-dir", help="Path to the output directory.", default="client"
     )
@@ -40,12 +49,17 @@ def main():
     )
     args = parser.parse_args()
 
-    openapi_json = Path(args.openapi_json)
     output_dir = Path(args.output_dir)
     template_dir = Path(args.template_dir)
 
-    with open(openapi_json) as f:
-        spec = json.load(f)
+    if is_url(args.openapi_json):
+        res = httpx.get(args.openapi_json, timeout=30)
+        res.raise_for_status()
+        spec = res.json()
+    else:
+        openapi_json = Path(args.openapi_json)
+        with open(openapi_json) as f:
+            spec = json.load(f)
 
     os.makedirs(output_dir, exist_ok=True)
 
