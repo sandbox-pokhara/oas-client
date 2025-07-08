@@ -4,11 +4,14 @@ from typing import Any
 from jinja2 import Environment
 from jinja2 import FileSystemLoader
 
+from oas_client.parser import find_request_schemas
 from oas_client.parser import find_schemas
 
 
 def render_requests(spec: dict[str, Any], template_dir: Path) -> str:
     schemas, imports = find_schemas(spec, partial=True)
+    # render necessary schemas only
+    schemas = [s for s in schemas if s["name"] in find_request_schemas(spec)]
     env = Environment(
         loader=FileSystemLoader(template_dir),
         trim_blocks=True,

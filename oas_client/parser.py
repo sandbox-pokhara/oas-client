@@ -138,3 +138,69 @@ def find_functions(spec: dict[str, Any]):
                 }
             )
     return functions
+
+
+def find_nested_schemas(spec: dict[str, Any], schema_ref: str) -> list[str]:
+    schemas: dict[str, dict[str, Any]] = spec.get("components", {}).get(
+        "schemas", {}
+    )
+    for name, s in schemas.items():
+        if name != schema_ref.split("/")[-1]:
+            continue
+        props: dict[str, dict[str, Any]] = s.get("properties", {})
+        for _, prop in props.items():
+            if "anyOf" in prop:
+                nested_list: list[str] = []
+                for p in prop["anyOf"]:
+                    if "$ref" in p:
+                        nested_list += [p["$ref"]] + find_nested_schemas(
+                            spec, p["$ref"]
+                        )
+                return nested_list
+            if "items" in prop and "$ref" in prop["items"]:
+                nested = prop["items"]["$ref"]
+                return [nested] + find_nested_schemas(spec, nested)
+            if "$ref" in prop:
+                nested = prop["$ref"]
+                return [nested] + find_nested_schemas(spec, nested)
+    return []
+
+
+def find_request_schemas(spec: dict[str, Any]):
+    output: set[str] = set()
+    paths: dict[str, dict[str, dict[str, Any]]] = spec.get("paths", {})
+    for _, methods in paths.items():
+        for _, op in methods.items():
+            if "requestBody" in op:
+                content = op["requestBody"].get("content", {})
+                if "application/json" in content:
+                    try:
+                        schema_ref = content["application/json"]["schema"][
+                            "$ref"
+                        ]
+                        output.add(schema_ref.split("/")[-1])
+                        for n in find_nested_schemas(spec, schema_ref):
+                            output.add(n.split("/")[-1])
+                    except KeyError:
+                        pass
+    return list(output)
+
+
+def find_response_schemas(spec: dict[str, Any]):
+    output: set[str] = set()
+    paths: dict[str, dict[str, dict[str, Any]]] = spec.get("paths", {})
+    for _, methods in paths.items():
+        for _, op in methods.items():
+            responses: dict[str, dict[str, Any]] = op.get("responses", {})
+            for _, res in responses.items():
+                try:
+                    schema_ref: str = res["content"]["application/json"][
+                        "schema"
+                    ]["$ref"]
+                    schema = schema_ref.split("/")[-1]
+                    output.add(schema)
+                    for n in find_nested_schemas(spec, schema_ref):
+                        output.add(n.split("/")[-1])
+                except KeyError:
+                    pass
+    return list(output)
