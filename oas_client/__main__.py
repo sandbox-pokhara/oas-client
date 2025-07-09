@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 
 import httpx
@@ -14,9 +15,6 @@ from oas_client.renderers.responses import render_responses
 
 BASE_DIR = Path(__file__).parent
 
-import subprocess
-from pathlib import Path
-
 
 def is_url(path: str) -> bool:
     return re.match(r"^https?://", path) is not None
@@ -26,9 +24,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate OpenAPI client from an OpenAPI JSON spec."
     )
-    parser.add_argument(
-        "openapi_json", help="Path or URL to the OpenAPI JSON file."
-    )
+    parser.add_argument("openapi_json", help="Path or URL to the OpenAPI JSON file.")
     parser.add_argument(
         "--output-dir", help="Path to the output directory.", default="client"
     )

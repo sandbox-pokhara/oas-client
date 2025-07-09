@@ -8,10 +8,7 @@ from oas_client.utils import to_pascal_case
 def find_schemas(
     spec: dict[str, Any], partial: bool = False
 ) -> tuple[list[dict[str, Any]], set[tuple[str, str]]]:
-
-    schemas: dict[str, dict[str, Any]] = spec.get("components", {}).get(
-        "schemas", {}
-    )
+    schemas: dict[str, dict[str, Any]] = spec.get("components", {}).get("schemas", {})
     output: list[dict[str, Any]] = []
     imports: set[tuple[str, str]] = set()
     for name, schema in schemas.items():
@@ -29,16 +26,12 @@ def find_schemas(
                 fields.append({"name": prop_name, "type": type_str})
                 for i in imps:
                     imports.add(i)
-            output.append(
-                {"name": name, "fields": fields, "type": "TypedDict"}
-            )
+            output.append({"name": name, "fields": fields, "type": "TypedDict"})
         elif schema_type == "string":
             # assumes that all string schema has enum field
             # if string schema does not enum it will raise KeyError
             imports.add(("typing", "Literal"))
-            output.append(
-                {"name": name, "fields": schema["enum"], "type": "Literal"}
-            )
+            output.append({"name": name, "fields": schema["enum"], "type": "Literal"})
         else:
             raise NotImplementedError(
                 f"Schema type {schema_type} is not implemented. Create an"
@@ -80,9 +73,7 @@ def find_parameters(
                     imports.add(i)
 
             imports.add(("typing", "TypedDict"))
-            output.append(
-                {"name": operation_id, "fields": fields, "type": "TypedDict"}
-            )
+            output.append({"name": operation_id, "fields": fields, "type": "TypedDict"})
     return output, imports
 
 
@@ -105,9 +96,9 @@ def find_functions(spec: dict[str, Any]):
                     "content", {}
                 ):
                     try:
-                        schema_ref = res["content"]["application/json"][
-                            "schema"
-                        ]["$ref"]
+                        schema_ref = res["content"]["application/json"]["schema"][
+                            "$ref"
+                        ]
                         schemas.add("responses." + schema_ref.split("/")[-1])
                     except KeyError:
                         # TODO: support non $ref schemas
@@ -119,21 +110,15 @@ def find_functions(spec: dict[str, Any]):
                 content = op["requestBody"].get("content", {})
                 if "application/json" in content:
                     try:
-                        schema_ref = content["application/json"]["schema"][
-                            "$ref"
-                        ]
+                        schema_ref = content["application/json"]["schema"]["$ref"]
                         body = "requests." + schema_ref.split("/")[-1]
                     except KeyError:
                         # TODO: support non $ref schemas
                         body = "Any"
 
             # Extract query/path parameters exists
-            is_params = [
-                p for p in op.get("parameters", []) if p["in"] == "path"
-            ] != []
-            is_query = [
-                p for p in op.get("parameters", []) if p["in"] == "query"
-            ] != []
+            is_params = [p for p in op.get("parameters", []) if p["in"] == "path"] != []
+            is_query = [p for p in op.get("parameters", []) if p["in"] == "query"] != []
 
             functions.append(
                 {
@@ -158,9 +143,7 @@ def find_functions(spec: dict[str, Any]):
 
 
 def find_nested_schemas(spec: dict[str, Any], schema_ref: str) -> list[str]:
-    schemas: dict[str, dict[str, Any]] = spec.get("components", {}).get(
-        "schemas", {}
-    )
+    schemas: dict[str, dict[str, Any]] = spec.get("components", {}).get("schemas", {})
     for name, s in schemas.items():
         if name != schema_ref.split("/")[-1]:
             continue
@@ -192,9 +175,7 @@ def find_request_schemas(spec: dict[str, Any]):
                 content = op["requestBody"].get("content", {})
                 if "application/json" in content:
                     try:
-                        schema_ref = content["application/json"]["schema"][
-                            "$ref"
-                        ]
+                        schema_ref = content["application/json"]["schema"]["$ref"]
                         output.add(schema_ref.split("/")[-1])
                         for n in find_nested_schemas(spec, schema_ref):
                             output.add(n.split("/")[-1])
@@ -211,9 +192,9 @@ def find_response_schemas(spec: dict[str, Any]):
             responses: dict[str, dict[str, Any]] = op.get("responses", {})
             for _, res in responses.items():
                 try:
-                    schema_ref: str = res["content"]["application/json"][
-                        "schema"
-                    ]["$ref"]
+                    schema_ref: str = res["content"]["application/json"]["schema"][
+                        "$ref"
+                    ]
                     schema = schema_ref.split("/")[-1]
                     output.add(schema)
                     for n in find_nested_schemas(spec, schema_ref):

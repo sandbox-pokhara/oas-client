@@ -32,19 +32,3 @@ include-package-data = true
 
 [tool.setuptools.dynamic]
 version = { attr = "oas_client.__version__" }
-
-[tool.isort]
-profile = "black"
-line_length = 79
-force_single_line = true
-
-[tool.black]
-line-length = 79
-preview = true
-enable-unstable-feature = ["string_processing"]
-
-[tool.pyright]
-venvPath = "."
-venv = "venv"
-include = ["oas_client", "client", "test.py"]
-typeCheckingMode = "strict"
