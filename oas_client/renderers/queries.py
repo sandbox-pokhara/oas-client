@@ -11,7 +11,11 @@ from oas_client.utils import to_pascal_case
 def render_queries(spec: dict[str, Any], template_dir: Path) -> str:
     schemas, imports = find_parameters(spec, in_filter="query")
     schemas = [
-        {"name": to_pascal_case(s["name"] + "_query"), "fields": s["fields"]}
+        {
+            "name": to_pascal_case(s["name"] + "_query"),
+            "fields": s["fields"],
+            "type": s["type"],
+        }
         for s in schemas
     ]
     env = Environment(

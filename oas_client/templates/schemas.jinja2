@@ -4,6 +4,7 @@ from {{ i[0] }} import {{ i[1] }}
 
 
 {% for schema in schemas %}
+{% if schema.type == "TypedDict"%}
 class {{ schema.name }}(TypedDict):
 {% if schema.fields %}
 {% for field in schema.fields %}
@@ -11,6 +12,13 @@ class {{ schema.name }}(TypedDict):
 {% endfor %}
 {% else %}
     pass
+{% endif %}
+{% elif schema.type == "Literal" %}
+{{ schema.name }} = Literal[
+{% for field in schema.fields %}
+    "{{ field }}",
+{% endfor %}
+]
 {% endif %}
 
 

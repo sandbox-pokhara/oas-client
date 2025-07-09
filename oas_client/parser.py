@@ -15,20 +15,35 @@ def find_schemas(
     output: list[dict[str, Any]] = []
     imports: set[tuple[str, str]] = set()
     for name, schema in schemas.items():
-        imports.add(("typing", "TypedDict"))
-        required: set[str] = set(schema.get("required", []))
-        props: dict[str, dict[str, Any]] = schema.get("properties", {})
-
-        fields: list[dict[str, str]] = []
-        for prop_name, prop in props.items():
-            type_str, imps = resolve_type(prop)
-            if partial and prop_name not in required:
-                imports.add(("typing", "NotRequired"))
-                type_str = f"NotRequired[{type_str}]"
-            fields.append({"name": prop_name, "type": type_str})
-            for i in imps:
-                imports.add(i)
-        output.append({"name": name, "fields": fields})
+        schema_type = schema.get("type")
+        if schema_type == "object":
+            imports.add(("typing", "TypedDict"))
+            required: set[str] = set(schema.get("required", []))
+            props: dict[str, dict[str, Any]] = schema.get("properties", {})
+            fields: list[dict[str, str]] = []
+            for prop_name, prop in props.items():
+                type_str, imps = resolve_type(prop)
+                if partial and prop_name not in required:
+                    imports.add(("typing", "NotRequired"))
+                    type_str = f"NotRequired[{type_str}]"
+                fields.append({"name": prop_name, "type": type_str})
+                for i in imps:
+                    imports.add(i)
+            output.append(
+                {"name": name, "fields": fields, "type": "TypedDict"}
+            )
+        elif schema_type == "string":
+            # assumes that all string schema has enum field
+            # if string schema does not enum it will raise KeyError
+            imports.add(("typing", "Literal"))
+            output.append(
+                {"name": name, "fields": schema["enum"], "type": "Literal"}
+            )
+        else:
+            raise NotImplementedError(
+                f"Schema type {schema_type} is not implemented. Create an"
+                " issue in GitHub."
+            )
     return output, imports
 
 
@@ -65,7 +80,9 @@ def find_parameters(
                     imports.add(i)
 
             imports.add(("typing", "TypedDict"))
-            output.append({"name": operation_id, "fields": fields})
+            output.append(
+                {"name": operation_id, "fields": fields, "type": "TypedDict"}
+            )
     return output, imports
 
 
