@@ -1,5 +1,4 @@
-from typing import Any
-from typing import Literal
+from typing import Any, Literal
 
 from oas_client.types import resolve_type
 from oas_client.utils import to_pascal_case

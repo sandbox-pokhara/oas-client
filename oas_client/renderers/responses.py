@@ -1,11 +1,9 @@
 from pathlib import Path
 from typing import Any
 
-from jinja2 import Environment
-from jinja2 import FileSystemLoader
+from jinja2 import Environment, FileSystemLoader
 
-from oas_client.parser import find_response_schemas
-from oas_client.parser import find_schemas
+from oas_client.parser import find_response_schemas, find_schemas
 
 
 def render_responses(spec: dict[str, Any], template_dir: Path) -> str:

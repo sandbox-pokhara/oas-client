@@ -1,8 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from jinja2 import Environment
-from jinja2 import FileSystemLoader
+from jinja2 import Environment, FileSystemLoader
 
 from oas_client.parser import find_parameters
 from oas_client.utils import to_pascal_case

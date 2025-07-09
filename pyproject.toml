@@ -32,3 +32,9 @@ include-package-data = true
 
 [tool.setuptools.dynamic]
 version = { attr = "oas_client.__version__" }
+
+[tool.ty.environment]
+python = "./venv"
+
+[tool.ruff]
+lint.extend-select = ["I"]
