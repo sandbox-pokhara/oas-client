@@ -35,3 +35,15 @@ version = { attr = "oas_client.__version__" }
 
 [tool.ty.environment]
 python = "./venv"
+
+[tool.bumpver]
+current_version = "0.1.5"
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message = "chore: bump version to {new_version}"
+tag_message = "{new_version}"
+tag_scope = "default"
+commit = true
+tag = true
+
+[tool.bumpver.file_patterns]
+"oas_client/__init__.py" = ['__version__ = "{version}"']
