@@ -13,7 +13,7 @@ def find_schemas(
     for name, schema in schemas.items():
         schema_type = schema.get("type")
         if schema_type == "object":
-            imports.add(("typing", "TypedDict"))
+            imports.add(("typing_extensions", "TypedDict"))
             required: set[str] = set(schema.get("required", []))
             props: dict[str, dict[str, Any]] = schema.get("properties", {})
             fields: list[dict[str, str]] = []
@@ -71,7 +71,7 @@ def find_parameters(
                 for i in imps:
                     imports.add(i)
 
-            imports.add(("typing", "TypedDict"))
+            imports.add(("typing_extensions", "TypedDict"))
             output.append({"name": operation_id, "fields": fields, "type": "TypedDict"})
     return output, imports
 
