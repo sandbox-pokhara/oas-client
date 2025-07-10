@@ -37,7 +37,7 @@ version = { attr = "oas_client.__version__" }
 python = "./venv"
 
 [tool.bumpver]
-current_version = "0.1.5"
+current_version = "0.1.6"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "chore: bump version to {new_version}"
 tag_message = "{new_version}"
