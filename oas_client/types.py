@@ -18,7 +18,7 @@ def resolve_type(prop: dict[str, Any]) -> tuple[str, list[tuple[str, str]]]:
             types.append(t)
             imports += i
         return " | ".join(types), imports
-    t = prop.get("type")
+    t: str | None = prop.get("type")
     if t == "string":
         return "str", []
     elif t == "integer":

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "oas-client"
-requires-python = ">=3.6.2"
+requires-python = ">=3.11"
 authors = [{ name = "Pradish Bijukchhe", email = "pradish@sandbox.com.np" }]
 description = "Generate typed python client from OpenAPI specification"
 readme = "README.md"
@@ -35,6 +35,3 @@ version = { attr = "oas_client.__version__" }
 
 [tool.ty.environment]
 python = "./venv"
-
-[tool.ruff]
-lint.extend-select = ["I"]

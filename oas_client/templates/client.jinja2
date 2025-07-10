@@ -1,13 +1,9 @@
 from typing import Any
 from urllib.parse import urlencode
 
-
 import httpx
 
-from . import params
-from . import queries
-from . import requests
-from . import responses
+from . import params, queries, requests, responses
 
 
 class APIClient(httpx.Client):

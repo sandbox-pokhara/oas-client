@@ -1,6 +1,4 @@
-{% for i in imports %}
-from {{ i[0] }} import {{ i[1] }}
-{% endfor %}
+{{ imports }}
 
 
 {% for schema in schemas %}

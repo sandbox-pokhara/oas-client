@@ -38,11 +38,6 @@ def main():
         help="Disables code formatting (black)",
         action="store_true",
     )
-    parser.add_argument(
-        "--no-import-sorting",
-        help="Disables import sorting (isort)",
-        action="store_true",
-    )
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -72,17 +67,14 @@ def main():
     (output_dir / "params.py").write_text(params)
     (output_dir / "client.py").write_text(client)
 
-    if not args.no_import_sorting:
-        try:
-            subprocess.run(["isort", str(output_dir)], check=True)
-        except FileNotFoundError:
-            print("isort not found in path. Skipping...")
-
     if not args.no_formatting:
         try:
-            subprocess.run(["black", str(output_dir)], check=True)
+            # linting
+            subprocess.run(["ruff", "check", "--fix", "--quiet", output_dir])
+            # formatting
+            subprocess.run(["ruff", "format", "--quiet", output_dir])
         except FileNotFoundError:
-            print("black not found in path. Skipping...")
+            print("ruff not found in path. Skipping...")
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader
 
 from oas_client.parser import find_parameters
-from oas_client.utils import to_pascal_case
+from oas_client.utils import render_imports, to_pascal_case
 
 
 def render_params(spec: dict[str, Any], template_dir: Path) -> str:
@@ -23,5 +23,5 @@ def render_params(spec: dict[str, Any], template_dir: Path) -> str:
         lstrip_blocks=True,
     )
     template = env.get_template("schemas.jinja2")
-    output_code = template.render(schemas=schemas, imports=imports)
+    output_code = template.render(schemas=schemas, imports=render_imports(imports))
     return output_code
