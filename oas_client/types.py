@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from oas_client.openapitype import Reference, Schema
+from oas_client.openapi import Reference, Schema
 
 
 class ParserOutput(BaseModel):

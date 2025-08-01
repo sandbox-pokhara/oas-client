@@ -2,7 +2,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
-from oas_client.openapitype import OpenAPI
+from oas_client.openapi import OpenAPI
 from oas_client.parser import find_schemas, traverse_path_methods_get
 from oas_client.utils import render_imports
 

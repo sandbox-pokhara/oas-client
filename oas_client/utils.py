@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from oas_client.exceptions import ReferenceNotResolved
-from oas_client.openapitype import Components, Reference, Response, Schema
+from oas_client.openapi import Components, Reference, Response, Schema
 
 
 def to_pascal_case(s: str) -> str:
@@ -31,7 +31,7 @@ def render_imports(imports: set[tuple[str, str]]):
 
 
 def get_schema_by_reference(component: Components, ref: Reference) -> Schema:
-    # pattren = #/components/schemas/PagedServerSchema
+    # pattern = #/components/schemas/PagedServerSchema
     schema_name = ref.ref.split("/")[-1]
     schema = component.schemas.get(schema_name, None)
     if isinstance(schema, Schema):
@@ -39,8 +39,8 @@ def get_schema_by_reference(component: Components, ref: Reference) -> Schema:
     raise ReferenceNotResolved(f"Could not find matching schema for Reference:{ref}")
 
 
-def get_response_by_refrenece(component: Components, ref: Reference) -> Response:
-    # pattren = #/components/schemas/PagedServerSchema
+def get_response_by_reference(component: Components, ref: Reference) -> Response:
+    # pattern = #/components/schemas/PagedServerSchema
     response_name = ref.ref.split("/")[-1]
     response = component.schemas.get(response_name, None)
     if isinstance(response, Response):

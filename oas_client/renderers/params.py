@@ -3,7 +3,7 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
 
-from oas_client.openapitype import OpenAPI
+from oas_client.openapi import OpenAPI
 from oas_client.parser import find_parameters
 from oas_client.utils import render_imports, to_pascal_case
 

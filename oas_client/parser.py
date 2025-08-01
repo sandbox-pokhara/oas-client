@@ -1,10 +1,10 @@
 from typing import Any, Literal
 from warnings import warn
 
-from oas_client.openapitype import *
+from oas_client.openapi import *
 from oas_client.types import ParserOutput, resolve_type
 from oas_client.utils import (
-    get_response_by_refrenece,
+    get_response_by_reference,
     get_schema_by_reference,
     to_pascal_case,
 )
@@ -77,7 +77,7 @@ def find_parameters(
             params = [
                 o
                 for o in operation.parameters
-                if isinstance(o, Parameter) and str(o.in_) == in_filter
+                if isinstance(o, Parameter) and o.in_.value == in_filter
             ]
             if not params:
                 continue
@@ -154,12 +154,12 @@ def find_functions(spec: OpenAPI):
             is_params = [
                 p
                 for p in op.parameters
-                if isinstance(p, Parameter) and str(p.in_) == "path"
-            ] != []
+                if isinstance(p, Parameter) and p.in_.value == "path"
+            ]
             is_query = [
                 p
                 for p in op.parameters
-                if isinstance(p, Parameter) and str(p.in_) == "query"
+                if isinstance(p, Parameter) and p.in_.value == "query"
             ] != []
 
             functions.append(
@@ -214,7 +214,7 @@ def response_schemas_parser(spec: OpenAPI, operation: Operation) -> list[str]:
         if isinstance(response, Reference):
             if spec.components is None:
                 continue
-            response = get_response_by_refrenece(spec.components, response)
+            response = get_response_by_reference(spec.components, response)
 
         # Look for application/json content
         json_content = response.content.get("application/json")
@@ -273,7 +273,6 @@ def traverse_path_methods_get(
 
 
 def find_nested_schemas(spec: OpenAPI, schema_ref: str) -> list[str]:
-    """Find all nested schema references within a given schema"""
     nested_refs: set[str] = set()
 
     if spec.components is None:
@@ -286,48 +285,40 @@ def find_nested_schemas(spec: OpenAPI, schema_ref: str) -> list[str]:
     if schema is None or isinstance(schema, Reference):
         return list(nested_refs)
 
-    # Recursively find all references in the schema
-    _collect_schema_refs(schema, nested_refs)
-
+    collect_schema_refs(schema, nested_refs)
     return list(nested_refs)
 
 
-def _collect_schema_refs(schema: Schema, refs: set[str]):
-    """Recursively collect all $ref values from a schema"""
+def collect_schema_refs(schema: Schema, refs: set[str]):
 
-    # Check properties
     if schema.properties:
         for prop_schema in schema.properties.values():
             if isinstance(prop_schema, Reference):
                 refs.add(prop_schema.ref)
             else:
-                _collect_schema_refs(prop_schema, refs)
+                collect_schema_refs(prop_schema, refs)
 
-    # Check array items
     if schema.items:
         if isinstance(schema.items, Reference):
             refs.add(schema.items.ref)
         else:
-            _collect_schema_refs(schema.items, refs)
+            collect_schema_refs(schema.items, refs)
 
-    # Check additional properties
     if isinstance(schema.additional_properties, Reference):
         refs.add(schema.additional_properties.ref)
     elif isinstance(schema.additional_properties, Schema):
-        _collect_schema_refs(schema.additional_properties, refs)
+        collect_schema_refs(schema.additional_properties, refs)
 
-    # Check composition schemas (allOf, oneOf, anyOf)
     for composition_list in [schema.all_of, schema.one_of, schema.any_of]:
         if composition_list:
             for item in composition_list:
                 if isinstance(item, Reference):
                     refs.add(item.ref)
                 else:
-                    _collect_schema_refs(item, refs)
+                    collect_schema_refs(item, refs)
 
-    # Check not schema
     if schema.not_:
         if isinstance(schema.not_, Reference):
             refs.add(schema.not_.ref)
         else:
-            _collect_schema_refs(schema.not_, refs)
+            collect_schema_refs(schema.not_, refs)

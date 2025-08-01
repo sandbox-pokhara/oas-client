@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 
-from oas_client.openapitype import OpenAPI
+from oas_client.openapi import OpenAPI
 from oas_client.renderers.client import render_client
 from oas_client.renderers.params import render_params
 from oas_client.renderers.queries import render_queries
