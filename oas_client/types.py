@@ -1,3 +1,5 @@
+from warnings import warn
+
 from pydantic import BaseModel
 
 from oas_client.openapi import Reference, Schema
@@ -43,4 +45,5 @@ def resolve_type(prop: Reference | Schema | None) -> tuple[str, list[tuple[str, 
         return f"list[{item_type}]", imports
     elif t == "object":
         return "dict[str, Any]", [("typing", "Any")]
+    warn(f"Fallback to Any type for type:{t}")
     return "Any", [("typing", "Any")]

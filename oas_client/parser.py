@@ -135,7 +135,9 @@ def find_functions(spec: OpenAPI):
                     if isinstance(_type, Reference):
                         schemas.add("responses." + _type.ref.split("/")[-1])
                     elif _type is not None:
-                        warn("Direct schema is not handled in request schemas parser")
+                        warn(
+                            "Direct schema is not handled in find_functions. Falling back to Any"
+                        )
                         schemas.add("Any")
 
             # Extract request body schema
@@ -147,7 +149,9 @@ def find_functions(spec: OpenAPI):
                     if isinstance(_type, Reference):
                         body = "requests." + _type.ref.split("/")[-1]
                     elif _type is not None:
-                        warn("Direct schema is not handled in request schemas parser")
+                        warn(
+                            "Direct schema is not handled in find_functions. Falling back to Any"
+                        )
                         body = "Any"
 
             # Extract query/path parameters exists
@@ -202,7 +206,9 @@ def request_schemas_parser(spec: OpenAPI, operation: Operation) -> list[str]:
             return schemas_list
         elif _type is None:
             return schemas_list
-        warn("Direct schema is not handled in request schemas parser")
+        warn(
+            "Direct schema is not handled in request schemas parser. Falling back to Any"
+        )
         return ["Any"]
     return schemas_list
 

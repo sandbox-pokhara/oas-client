@@ -292,10 +292,13 @@ class Components(BaseModel):
 
 
 class OpenAPI(BaseModel):
-    openapi: str
-    info: Info
+    # FIXME: added default values to all
+    # to prevent ty from throwing `missing-argument`
+    # error
+    openapi: str = ""
+    info: Info | None = None
     servers: list[Server] = []
-    paths: dict[str, PathItem]
+    paths: dict[str, PathItem] = {}
     components: Components | None = None
     security: list[SecurityRequirement] = []
     tags: list[Tag] = []
