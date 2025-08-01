@@ -11,6 +11,16 @@ class ParserOutput(BaseModel):
     type: str
 
 
+class FunctionSignature(BaseModel):
+    func_name: str
+    url: str
+    http_method: str
+    return_: str
+    body: str | None
+    params: str | None
+    query: str | None
+
+
 def resolve_type(prop: Reference | Schema | None) -> tuple[str, list[tuple[str, str]]]:
     """
     Returns type of the property and additional imports required

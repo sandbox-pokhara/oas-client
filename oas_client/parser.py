@@ -1,4 +1,4 @@
-from typing import Any, Literal
+from typing import Literal
 from warnings import warn
 
 from oas_client.openapi import (
@@ -9,7 +9,7 @@ from oas_client.openapi import (
     RequestBody,
     Schema,
 )
-from oas_client.types import ParserOutput, resolve_type
+from oas_client.types import FunctionSignature, ParserOutput, resolve_type
 from oas_client.utils import (
     get_response_by_reference,
     get_schema_by_reference,
@@ -108,7 +108,7 @@ def find_parameters(
 
 
 def find_functions(spec: OpenAPI):
-    functions: list[dict[str, Any]] = []
+    functions: list[FunctionSignature] = []
 
     for path, path_item in spec.paths.items():
         operations = [
@@ -174,23 +174,23 @@ def find_functions(spec: OpenAPI):
             ] != []
 
             functions.append(
-                {
-                    "func_name": op_id,
-                    "url": path,
-                    "http_method": method,
-                    "return": " | ".join(schemas) if schemas else "Any",
-                    "body": body,
-                    "params": (
+                FunctionSignature(
+                    func_name=op_id,
+                    url=path,
+                    http_method=method,
+                    return_=" | ".join(schemas) if schemas else "Any",
+                    body=body,
+                    params=(
                         "params." + to_pascal_case(str(op_id) + "_params")
                         if is_params
                         else None
                     ),
-                    "query": (
+                    query=(
                         "queries." + to_pascal_case(str(op_id) + "_query")
                         if is_query
                         else None
                     ),
-                }
+                )
             )
     return functions
 

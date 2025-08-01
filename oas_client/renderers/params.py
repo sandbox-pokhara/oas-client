@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -10,12 +9,8 @@ from oas_client.utils import render_imports, to_pascal_case
 
 def render_params(spec: OpenAPI, template_dir: Path) -> str:
     schemas, imports = find_parameters(spec, in_filter="path")
-    clean_schemas: Any = [
-        {
-            "name": to_pascal_case(s.name + "_params"),
-            "fields": s.fields,
-            "type": s.type,
-        }
+    schemas = [
+        s.model_copy(update={"name": to_pascal_case(s.name + "_params")})
         for s in schemas
     ]
     env = Environment(
@@ -24,7 +19,5 @@ def render_params(spec: OpenAPI, template_dir: Path) -> str:
         lstrip_blocks=True,
     )
     template = env.get_template("schemas.jinja2")
-    output_code = template.render(
-        schemas=clean_schemas, imports=render_imports(imports)
-    )
+    output_code = template.render(schemas=schemas, imports=render_imports(imports))
     return output_code
