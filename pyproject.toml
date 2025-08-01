@@ -39,4 +39,4 @@ include-package-data = true
 version = { attr = "oas_client.__version__" }
 
 [tool.ty.environment]
-python = ".venv"
+python = "./venv"

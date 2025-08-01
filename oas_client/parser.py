@@ -1,7 +1,14 @@
 from typing import Any, Literal
 from warnings import warn
 
-from oas_client.openapi import *
+from oas_client.openapi import (
+    OpenAPI,
+    Operation,
+    Parameter,
+    Reference,
+    RequestBody,
+    Schema,
+)
 from oas_client.types import ParserOutput, resolve_type
 from oas_client.utils import (
     get_response_by_reference,
@@ -296,7 +303,6 @@ def find_nested_schemas(spec: OpenAPI, schema_ref: str) -> list[str]:
 
 
 def collect_schema_refs(schema: Schema, refs: set[str]):
-
     if schema.properties:
         for prop_schema in schema.properties.values():
             if isinstance(prop_schema, Reference):
