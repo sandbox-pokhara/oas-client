@@ -143,26 +143,27 @@ def find_functions(spec: dict[str, Any]):
 
 def find_nested_schemas(spec: dict[str, Any], schema_ref: str) -> list[str]:
     schemas: dict[str, dict[str, Any]] = spec.get("components", {}).get("schemas", {})
+    nested_list: list[str] = []
     for name, s in schemas.items():
         if name != schema_ref.split("/")[-1]:
             continue
         props: dict[str, dict[str, Any]] = s.get("properties", {})
-        for _, prop in props.items():
+        for prop in props.values():
             if "anyOf" in prop:
-                nested_list: list[str] = []
                 for p in prop["anyOf"]:
                     if "$ref" in p:
-                        nested_list += [p["$ref"]] + find_nested_schemas(
-                            spec, p["$ref"]
-                        )
-                return nested_list
-            if "items" in prop and "$ref" in prop["items"]:
+                        nested = p["$ref"]
+                        nested_list.append(nested)
+                        nested_list.extend(find_nested_schemas(spec, nested))
+            elif "items" in prop and "$ref" in prop["items"]:
                 nested = prop["items"]["$ref"]
-                return [nested] + find_nested_schemas(spec, nested)
-            if "$ref" in prop:
+                nested_list.append(nested)
+                nested_list.extend(find_nested_schemas(spec, nested))
+            elif "$ref" in prop:
                 nested = prop["$ref"]
-                return [nested] + find_nested_schemas(spec, nested)
-    return []
+                nested_list.append(nested)
+                nested_list.extend(find_nested_schemas(spec, nested))
+    return nested_list
 
 
 def find_request_schemas(spec: dict[str, Any]):
