@@ -3,17 +3,18 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
 
+from oas_client.openapitype import OpenAPI
 from oas_client.parser import find_parameters
 from oas_client.utils import render_imports, to_pascal_case
 
 
-def render_params(spec: dict[str, Any], template_dir: Path) -> str:
+def render_params(spec: OpenAPI, template_dir: Path) -> str:
     schemas, imports = find_parameters(spec, in_filter="path")
-    schemas = [
+    clean_schemas: Any = [
         {
-            "name": to_pascal_case(s["name"] + "_params"),
-            "fields": s["fields"],
-            "type": s["type"],
+            "name": to_pascal_case(s.name + "_params"),
+            "fields": s.fields,
+            "type": s.type,
         }
         for s in schemas
     ]
@@ -23,5 +24,7 @@ def render_params(spec: dict[str, Any], template_dir: Path) -> str:
         lstrip_blocks=True,
     )
     template = env.get_template("schemas.jinja2")
-    output_code = template.render(schemas=schemas, imports=render_imports(imports))
+    output_code = template.render(
+        schemas=clean_schemas, imports=render_imports(imports)
+    )
     return output_code

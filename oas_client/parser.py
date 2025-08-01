@@ -1,36 +1,46 @@
 from typing import Any, Literal
+from warnings import warn
 
-from oas_client.types import resolve_type
-from oas_client.utils import to_pascal_case
+from oas_client.openapitype import *
+from oas_client.types import ParserOutput, resolve_type
+from oas_client.utils import (
+    get_response_by_refrenece,
+    get_schema_by_reference,
+    to_pascal_case,
+)
 
 
 def find_schemas(
-    spec: dict[str, Any], partial: bool = False
-) -> tuple[list[dict[str, Any]], set[tuple[str, str]]]:
-    schemas: dict[str, dict[str, Any]] = spec.get("components", {}).get("schemas", {})
-    output: list[dict[str, Any]] = []
+    spec: OpenAPI, partial: bool = False
+) -> tuple[list[ParserOutput], set[tuple[str, str]]]:
+    if not spec.components:
+        return ([], set())
+    schemas = spec.components.schemas
+    output: list[ParserOutput] = []
     imports: set[tuple[str, str]] = set()
     for name, schema in schemas.items():
-        schema_type = schema.get("type")
+        if isinstance(schema, Reference):
+            schema = get_schema_by_reference(spec.components, schema)
+        schema_type = schema.type
         if schema_type == "object":
-            imports.add(("typing_extensions", "TypedDict"))
-            required: set[str] = set(schema.get("required", []))
-            props: dict[str, dict[str, Any]] = schema.get("properties", {})
+            imports.add(("pydantic", "BaseModel"))
+            required: set[str] = set(schema.required)
+            props = schema.properties
             fields: list[dict[str, str]] = []
             for prop_name, prop in props.items():
                 type_str, imps = resolve_type(prop)
                 if partial and prop_name not in required:
-                    imports.add(("typing", "NotRequired"))
-                    type_str = f"NotRequired[{type_str}]"
+                    if not type_str.endswith("| None"):
+                        type_str = f"{type_str} | None"
                 fields.append({"name": prop_name, "type": type_str})
                 for i in imps:
                     imports.add(i)
-            output.append({"name": name, "fields": fields, "type": "TypedDict"})
+            output.append(ParserOutput(name=name, fields=fields, type="BaseModel"))
         elif schema_type == "string":
             # assumes that all string schema has enum field
             # if string schema does not enum it will raise KeyError
             imports.add(("typing", "Literal"))
-            output.append({"name": name, "fields": schema["enum"], "type": "Literal"})
+            output.append(ParserOutput(name=name, fields=schema.enum, type="Literal"))
         else:
             raise NotImplementedError(
                 f"Schema type {schema_type} is not implemented. Create an"
@@ -40,84 +50,117 @@ def find_schemas(
 
 
 def find_parameters(
-    spec: dict[str, Any], in_filter: Literal["query", "path"]
-) -> tuple[list[dict[str, Any]], set[tuple[str, str]]]:
-    output: list[dict[str, Any]] = []
+    spec: OpenAPI, in_filter: Literal["query", "path"]
+) -> tuple[list[ParserOutput], set[tuple[str, str]]]:
+    output: list[ParserOutput] = []
     imports: set[tuple[str, str]] = set()
 
-    paths: dict[str, dict[str, dict[str, Any]]] = spec.get("paths", {})
+    for _, path_item in spec.paths.items():
+        operations = [
+            path_item.get,
+            path_item.put,
+            path_item.post,
+            path_item.delete,
+            path_item.options,
+            path_item.head,
+            path_item.patch,
+            path_item.trace,
+        ]
 
-    for _, methods in paths.items():
-        for _, op in methods.items():
-            operation_id = op.get("operationId")
+        for operation in operations:
+            if operation is None:
+                continue
+            operation_id = operation.operation_id
             if not operation_id:
                 continue
 
-            params: list[dict[str, Any]] = [
-                o for o in op.get("parameters", []) if o.get("in") == in_filter
+            params = [
+                o
+                for o in operation.parameters
+                if isinstance(o, Parameter) and str(o.in_) == in_filter
             ]
             if not params:
                 continue
             fields: list[dict[str, str]] = []
             for q in params:
-                name = q["name"]
-                required = q.get("required", False)
-                schema = q.get("schema", {})
+                name = q.name
+                required = q.required
+                schema = q.schema_
                 type_str, imps = resolve_type(schema)
                 if not required:
-                    imports.add(("typing", "NotRequired"))
-                    type_str = f"NotRequired[{type_str}]"
+                    type_str = f"{type_str}|None"
                 fields.append({"name": name, "type": type_str})
                 for i in imps:
                     imports.add(i)
 
-            imports.add(("typing_extensions", "TypedDict"))
-            output.append({"name": operation_id, "fields": fields, "type": "TypedDict"})
+            imports.add(("pydantic", "BaseModel"))
+            output.append(
+                ParserOutput(name=operation_id, fields=fields, type="BaseModel")
+            )
     return output, imports
 
 
-def find_functions(spec: dict[str, Any]):
-    paths: dict[str, dict[str, dict[str, Any]]] = spec.get("paths", {})
+def find_functions(spec: OpenAPI):
     functions: list[dict[str, Any]] = []
 
-    for path, methods in paths.items():
-        for method, op in methods.items():
-            op_id = op["operationId"]
+    for path, path_item in spec.paths.items():
+        operations = [
+            ("get", path_item.get),
+            ("put", path_item.put),
+            ("post", path_item.post),
+            ("delete", path_item.delete),
+            ("options", path_item.options),
+            ("head", path_item.head),
+            ("patch", path_item.patch),
+            ("trace", path_item.trace),
+        ]
+
+        for method, op in operations:
+            if op is None or op.operation_id is None:
+                continue
+            op_id = op.operation_id
 
             # Extract response schemas
             schemas: set[str] = set()
-            responses: dict[str, dict[str, Any]] = op.get("responses", {})
+            responses = op.responses
             for code, res in responses.items():
                 # only collect schemas with ok status because
                 # exception is raised on non ok status by
                 # res.raise_for_status in client methods
-                if 200 <= int(code) <= 299 and "application/json" in res.get(
-                    "content", {}
-                ):
-                    try:
-                        schema_ref = res["content"]["application/json"]["schema"][
-                            "$ref"
-                        ]
-                        schemas.add("responses." + schema_ref.split("/")[-1])
-                    except KeyError:
-                        # TODO: support non $ref schemas
+                if isinstance(res, Reference):
+                    schemas.add(res.ref.split("/")[-1])
+                    continue
+                if 200 <= int(code) <= 299 and "application/json" in res.content:
+                    _type = res.content["application/json"].schema_
+                    if isinstance(_type, Reference):
+                        schemas.add("responses." + _type.ref.split("/")[-1])
+                    elif _type is not None:
+                        warn("Direct schema is not handled in request schemas parser")
                         schemas.add("Any")
 
             # Extract request body schema
             body = None
-            if "requestBody" in op:
-                content = op["requestBody"].get("content", {})
+            if op.request_body and isinstance(op.request_body, RequestBody):
+                content = op.request_body.content
                 if "application/json" in content:
-                    try:
-                        schema_ref = content["application/json"]["schema"]["$ref"]
-                        body = "requests." + schema_ref.split("/")[-1]
-                    except KeyError:
-                        # TODO: support non $ref schemas
+                    _type = content["application/json"].schema_
+                    if isinstance(_type, Reference):
+                        body = "requests." + _type.ref.split("/")[-1]
+                    elif _type is not None:
+                        warn("Direct schema is not handled in request schemas parser")
                         body = "Any"
 
             # Extract query/path parameters exists
-            is_params = [p for p in op.get("parameters", []) if p["in"] == "path"] != []
-            is_query = [p for p in op.get("parameters", []) if p["in"] == "query"] != []
+            is_params = [
+                p
+                for p in op.parameters
+                if isinstance(p, Parameter) and str(p.in_) == "path"
+            ] != []
+            is_query = [
+                p
+                for p in op.parameters
+                if isinstance(p, Parameter) and str(p.in_) == "query"
+            ] != []
 
             functions.append(
                 {
@@ -127,12 +170,12 @@ def find_functions(spec: dict[str, Any]):
                     "return": " | ".join(schemas) if schemas else "Any",
                     "body": body,
                     "params": (
-                        "params." + to_pascal_case(op_id + "_params")
+                        "params." + to_pascal_case(str(op_id) + "_params")
                         if is_params
                         else None
                     ),
                     "query": (
-                        "queries." + to_pascal_case(op_id + "_query")
+                        "queries." + to_pascal_case(str(op_id) + "_query")
                         if is_query
                         else None
                     ),
@@ -141,63 +184,150 @@ def find_functions(spec: dict[str, Any]):
     return functions
 
 
-def find_nested_schemas(spec: dict[str, Any], schema_ref: str) -> list[str]:
-    schemas: dict[str, dict[str, Any]] = spec.get("components", {}).get("schemas", {})
-    for name, s in schemas.items():
-        if name != schema_ref.split("/")[-1]:
+def request_schemas_parser(spec: OpenAPI, operation: Operation) -> list[str]:
+    if operation.request_body is None:
+        return []
+
+    if isinstance(operation.request_body, Reference):
+        return [operation.request_body.ref.split("/")[-1]]
+
+    content = operation.request_body.content
+    schemas_list: list[str] = []
+    if "application/json" in content:
+        _type = content["application/json"].schema_
+        if isinstance(_type, Reference):
+            schemas_list.append(_type.ref.split("/")[-1])
+            for n in find_nested_schemas(spec, _type.ref):
+                schemas_list.append(n.split("/")[-1])
+            return schemas_list
+        elif _type is None:
+            return schemas_list
+        warn("Direct schema is not handled in request schemas parser")
+        return ["Any"]
+    return schemas_list
+
+
+def response_schemas_parser(spec: OpenAPI, operation: Operation) -> list[str]:
+    output: list[str] = []
+    for _, response in operation.responses.items():
+        # Handle Reference objects
+        if isinstance(response, Reference):
+            if spec.components is None:
+                continue
+            response = get_response_by_refrenece(spec.components, response)
+
+        # Look for application/json content
+        json_content = response.content.get("application/json")
+        if json_content is None:
             continue
-        props: dict[str, dict[str, Any]] = s.get("properties", {})
-        for _, prop in props.items():
-            if "anyOf" in prop:
-                nested_list: list[str] = []
-                for p in prop["anyOf"]:
-                    if "$ref" in p:
-                        nested_list += [p["$ref"]] + find_nested_schemas(
-                            spec, p["$ref"]
-                        )
-                return nested_list
-            if "items" in prop and "$ref" in prop["items"]:
-                nested = prop["items"]["$ref"]
-                return [nested] + find_nested_schemas(spec, nested)
-            if "$ref" in prop:
-                nested = prop["$ref"]
-                return [nested] + find_nested_schemas(spec, nested)
-    return []
+
+        if json_content.schema_ is None:
+            continue
+
+        # Handle schema references
+        if isinstance(json_content.schema_, Reference):
+            schema_ref = json_content.schema_.ref
+            schema_name = schema_ref.split("/")[-1]
+            output.append(schema_name)
+
+            # Find nested schemas
+            for nested_ref in find_nested_schemas(spec, schema_ref):
+                nested_name = nested_ref.split("/")[-1]
+                output.append(nested_name)
+
+    return output
 
 
-def find_request_schemas(spec: dict[str, Any]):
+def traverse_path_methods_get(
+    spec: OpenAPI, parse: Literal["requests", "response"]
+) -> list[str]:
     output: set[str] = set()
-    paths: dict[str, dict[str, dict[str, Any]]] = spec.get("paths", {})
-    for _, methods in paths.items():
-        for _, op in methods.items():
-            if "requestBody" in op:
-                content = op["requestBody"].get("content", {})
-                if "application/json" in content:
-                    try:
-                        schema_ref = content["application/json"]["schema"]["$ref"]
-                        output.add(schema_ref.split("/")[-1])
-                        for n in find_nested_schemas(spec, schema_ref):
-                            output.add(n.split("/")[-1])
-                    except KeyError:
-                        pass
+    if not spec.components:
+        return []
+
+    parse_callback = None
+    match parse:
+        case "requests":
+            parse_callback = request_schemas_parser
+        case "response":
+            parse_callback = response_schemas_parser
+
+    for _, path_item in spec.paths.items():
+        operations = [
+            path_item.get,
+            path_item.put,
+            path_item.post,
+            path_item.delete,
+            path_item.options,
+            path_item.head,
+            path_item.patch,
+            path_item.trace,
+        ]
+
+        for operation in operations:
+            if operation is None:
+                continue
+            output = output.union(set(parse_callback(spec, operation)))
+
     return list(output)
 
 
-def find_response_schemas(spec: dict[str, Any]):
-    output: set[str] = set()
-    paths: dict[str, dict[str, dict[str, Any]]] = spec.get("paths", {})
-    for _, methods in paths.items():
-        for _, op in methods.items():
-            responses: dict[str, dict[str, Any]] = op.get("responses", {})
-            for _, res in responses.items():
-                try:
-                    schema_ref: str = res["content"]["application/json"]["schema"][
-                        "$ref"
-                    ]
-                    schema = schema_ref.split("/")[-1]
-                    output.add(schema)
-                    for n in find_nested_schemas(spec, schema_ref):
-                        output.add(n.split("/")[-1])
-                except KeyError:
-                    pass
-    return list(output)
+def find_nested_schemas(spec: OpenAPI, schema_ref: str) -> list[str]:
+    """Find all nested schema references within a given schema"""
+    nested_refs: set[str] = set()
+
+    if spec.components is None:
+        return list(nested_refs)
+
+    # Extract schema name from reference
+    schema_name = schema_ref.split("/")[-1]
+    schema = spec.components.schemas.get(schema_name)
+
+    if schema is None or isinstance(schema, Reference):
+        return list(nested_refs)
+
+    # Recursively find all references in the schema
+    _collect_schema_refs(schema, nested_refs)
+
+    return list(nested_refs)
+
+
+def _collect_schema_refs(schema: Schema, refs: set[str]):
+    """Recursively collect all $ref values from a schema"""
+
+    # Check properties
+    if schema.properties:
+        for prop_schema in schema.properties.values():
+            if isinstance(prop_schema, Reference):
+                refs.add(prop_schema.ref)
+            else:
+                _collect_schema_refs(prop_schema, refs)
+
+    # Check array items
+    if schema.items:
+        if isinstance(schema.items, Reference):
+            refs.add(schema.items.ref)
+        else:
+            _collect_schema_refs(schema.items, refs)
+
+    # Check additional properties
+    if isinstance(schema.additional_properties, Reference):
+        refs.add(schema.additional_properties.ref)
+    elif isinstance(schema.additional_properties, Schema):
+        _collect_schema_refs(schema.additional_properties, refs)
+
+    # Check composition schemas (allOf, oneOf, anyOf)
+    for composition_list in [schema.all_of, schema.one_of, schema.any_of]:
+        if composition_list:
+            for item in composition_list:
+                if isinstance(item, Reference):
+                    refs.add(item.ref)
+                else:
+                    _collect_schema_refs(item, refs)
+
+    # Check not schema
+    if schema.not_:
+        if isinstance(schema.not_, Reference):
+            refs.add(schema.not_.ref)
+        else:
+            _collect_schema_refs(schema.not_, refs)

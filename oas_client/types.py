@@ -1,16 +1,25 @@
-from typing import Any
+from pydantic import BaseModel
+
+from oas_client.openapitype import Reference, Schema
 
 
-def resolve_type(prop: dict[str, Any]) -> tuple[str, list[tuple[str, str]]]:
+class ParserOutput(BaseModel):
+    name: str
+    fields: list[dict[str, str]]
+    type: str
+
+
+def resolve_type(prop: Reference | Schema | None) -> tuple[str, list[tuple[str, str]]]:
     """
     Returns type of the property and additional imports required
     """
-    if "$ref" in prop:
-        schema = prop["$ref"].split("/")[-1]
-        return f'"{schema}"', []
-
-    any_of: list[dict[str, Any]] | None = prop.get("anyOf")
-    if any_of is not None:
+    if prop is None:
+        return "None", []
+    if isinstance(prop, Reference):
+        schema_name = prop.ref.split("/")[-1]
+        return f'"{schema_name}"', []
+    any_of: list[Reference | Schema] = prop.any_of
+    if any_of:
         types: list[str] = []
         imports: list[tuple[str, str]] = []
         for p in any_of:
@@ -18,7 +27,7 @@ def resolve_type(prop: dict[str, Any]) -> tuple[str, list[tuple[str, str]]]:
             types.append(t)
             imports += i
         return " | ".join(types), imports
-    t: str | None = prop.get("type")
+    t: str | None = prop.type
     if t == "string":
         return "str", []
     elif t == "integer":
@@ -30,7 +39,7 @@ def resolve_type(prop: dict[str, Any]) -> tuple[str, list[tuple[str, str]]]:
     elif t == "null":
         return "None", []
     elif t == "array":
-        item_type, imports = resolve_type(prop.get("items", {}))
+        item_type, imports = resolve_type(prop.items)
         return f"list[{item_type}]", imports
     elif t == "object":
         return "dict[str, Any]", [("typing", "Any")]

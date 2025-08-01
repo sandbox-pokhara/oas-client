@@ -7,6 +7,7 @@ from pathlib import Path
 
 import httpx
 
+from oas_client.openapitype import OpenAPI
 from oas_client.renderers.client import render_client
 from oas_client.renderers.params import render_params
 from oas_client.renderers.queries import render_queries
@@ -46,12 +47,13 @@ def main():
     if is_url(args.openapi_json):
         res = httpx.get(args.openapi_json, timeout=30)
         res.raise_for_status()
-        spec = res.json()
+        spec_json = res.json()
     else:
         openapi_json = Path(args.openapi_json)
         with open(openapi_json) as f:
-            spec = json.load(f)
+            spec_json = json.load(f)
 
+    spec = OpenAPI(**spec_json)
     os.makedirs(output_dir, exist_ok=True)
 
     responses = render_responses(spec, template_dir)
