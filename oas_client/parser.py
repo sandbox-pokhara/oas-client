@@ -17,23 +17,24 @@ from oas_client.utils import (
 )
 
 
-def find_schemas(
-    spec: OpenAPI, partial: bool = False
-) -> tuple[list[ParserOutput], set[tuple[str, str]]]:
+def find_schemas(spec: OpenAPI, partial: bool = False) -> list[ParserOutput]:
     if not spec.components:
-        return ([], set())
+        return []
     schemas = spec.components.schemas
     output: list[ParserOutput] = []
-    imports: set[tuple[str, str]] = set()
     for name, schema in schemas.items():
         if isinstance(schema, Reference):
             schema = get_schema_by_reference(spec.components, schema)
         schema_type = schema.type
+
+        imports: set[tuple[str, str]] = set()
+
         if schema_type == "object":
+            fields: list[dict[str, str]] = []
+
             imports.add(("pydantic", "BaseModel"))
             required: set[str] = set(schema.required)
             props = schema.properties
-            fields: list[dict[str, str]] = []
             for prop_name, prop in props.items():
                 type_str, imps = resolve_type(prop)
                 if partial and prop_name not in required:
@@ -42,25 +43,30 @@ def find_schemas(
                 fields.append({"name": prop_name, "type": type_str})
                 for i in imps:
                     imports.add(i)
-            output.append(ParserOutput(name=name, fields=fields, type="BaseModel"))
+            output.append(
+                ParserOutput(
+                    name=name, fields=fields, type="BaseModel", imports=imports
+                )
+            )
         elif schema_type == "string":
-            # assumes that all string schema has enum field
-            # if string schema does not enum it will raise KeyError
             imports.add(("typing", "Literal"))
-            output.append(ParserOutput(name=name, fields=schema.enum, type="Literal"))
+            output.append(
+                ParserOutput(
+                    name=name, fields=schema.enum, type="Literal", imports=imports
+                )
+            )
         else:
             raise NotImplementedError(
                 f"Schema type {schema_type} is not implemented. Create an"
                 " issue in GitHub."
             )
-    return output, imports
+    return output
 
 
 def find_parameters(
     spec: OpenAPI, in_filter: Literal["query", "path"]
-) -> tuple[list[ParserOutput], set[tuple[str, str]]]:
+) -> list[ParserOutput]:
     output: list[ParserOutput] = []
-    imports: set[tuple[str, str]] = set()
 
     for _, path_item in spec.paths.items():
         operations = [
@@ -88,6 +94,7 @@ def find_parameters(
             ]
             if not params:
                 continue
+            imports: set[tuple[str, str]] = set()
             fields: list[dict[str, str]] = []
             for q in params:
                 name = q.name
@@ -102,9 +109,12 @@ def find_parameters(
 
             imports.add(("pydantic", "BaseModel"))
             output.append(
-                ParserOutput(name=operation_id, fields=fields, type="BaseModel")
+                ParserOutput(
+                    name=operation_id, fields=fields, type="BaseModel", imports=imports
+                )
             )
-    return output, imports
+
+    return output
 
 
 def find_functions(spec: OpenAPI):

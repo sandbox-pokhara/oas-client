@@ -9,6 +9,7 @@ class ParserOutput(BaseModel):
     name: str
     fields: list[dict[str, str]] | list[str]
     type: str
+    imports: set[tuple[str, str]]
 
 
 class FunctionSignature(BaseModel):

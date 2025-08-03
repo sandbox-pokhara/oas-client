@@ -8,10 +8,13 @@ from oas_client.utils import render_imports
 
 
 def render_responses(spec: OpenAPI, template_dir: Path) -> str:
-    schemas, imports = find_schemas(spec, partial=False)
+    schemas = find_schemas(spec, partial=False)
     # render necessary schemas only
     response_schemas = traverse_path_methods_get(spec, "response")
     schemas = [s for s in schemas if s.name in response_schemas]
+    imports: set[tuple[str, str]] = set()
+    for s in schemas:
+        imports = imports.union(s.imports)
     env = Environment(
         loader=FileSystemLoader(template_dir),
         trim_blocks=True,
