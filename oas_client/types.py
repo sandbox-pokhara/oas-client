@@ -45,7 +45,7 @@ def resolve_type(prop: Reference | Schema | None) -> tuple[str, list[tuple[str, 
             # schemas names, and extend it to whole type
             # for example:
             # t : "Atype" | None
-            # 1. t -> Atype | None : byt .replace
+            # 1. t -> Atype | None : by .replace
             # 2. t -> "Atype | None" : by .__repr__
 
             temp_type = temp_type.replace('"', "").__repr__()
