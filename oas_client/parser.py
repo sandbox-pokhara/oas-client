@@ -141,12 +141,20 @@ def find_functions(spec: OpenAPI):
                     _type = res.content["application/json"].schema_
                     if isinstance(_type, Reference):
                         schemas.add("responses." + _type.ref.split("/")[-1])
-                    elif _type is not None:
-                        warn(
-                            "Direct schema is not handled in find_functions. Falling back to Any"
-                        )
-                        schemas.add("Any")
-
+                    elif _type is None:
+                        schemas.add("None")
+                    else:
+                        _type = _type.items
+                        match _type:
+                            case None:
+                                schemas.add("None")
+                            case Reference():
+                                schemas.add("responses." + _type.ref.split("/")[-1])
+                            case Schema():
+                                warn(
+                                    f"Direct schema is not handled in find_functions. Falling back to Any for type:{_type}"
+                                )
+                                schemas.add("Any")
             # Extract request body schema
             body = None
             if op.request_body and isinstance(op.request_body, RequestBody):
@@ -157,7 +165,7 @@ def find_functions(spec: OpenAPI):
                         body = "requests." + _type.ref.split("/")[-1]
                     elif _type is not None:
                         warn(
-                            "Direct schema is not handled in find_functions. Falling back to Any"
+                            f"Direct schema is not handled in find_functions. Falling back to Any for type:{_type}"
                         )
                         body = "Any"
 
@@ -248,6 +256,17 @@ def response_schemas_parser(spec: OpenAPI, operation: Operation) -> list[str]:
                 nested_name = nested_ref.split("/")[-1]
                 output.append(nested_name)
 
+        # Handle schema schema
+        if isinstance(json_content.schema_, Schema):
+            itms = json_content.schema_.items
+            match itms:
+                case None:
+                    continue
+                case Reference():
+                    schema_name = itms.ref.split("/")[-1]
+                    output.append(schema_name)
+                case Schema():
+                    continue
     return output
 
 

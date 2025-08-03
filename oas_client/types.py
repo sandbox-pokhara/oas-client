@@ -7,7 +7,7 @@ from oas_client.openapi import Reference, Schema
 
 class ParserOutput(BaseModel):
     name: str
-    fields: list[dict[str, str]]
+    fields: list[dict[str, str]] | list[str]
     type: str
 
 
@@ -38,7 +38,10 @@ def resolve_type(prop: Reference | Schema | None) -> tuple[str, list[tuple[str, 
             t, i = resolve_type(p)
             types.append(t)
             imports += i
-        return " | ".join(types), imports
+        temp_type = " | ".join(types)
+        if '"' in temp_type:
+            temp_type = f'"{temp_type.replace('"','')}"'
+        return temp_type, imports
     t: str | None = prop.type
     if t == "string":
         return "str", []
