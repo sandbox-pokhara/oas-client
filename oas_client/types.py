@@ -41,7 +41,14 @@ def resolve_type(prop: Reference | Schema | None) -> tuple[str, list[tuple[str, 
             imports += i
         temp_type = " | ".join(types)
         if '"' in temp_type:
-            temp_type = f'"{temp_type.replace('"','')}"'
+            # remove the double quotes from the
+            # schemas names, and extend it to whole type
+            # for example:
+            # t : "Atype" | None
+            # 1. t -> Atype | None : byt .replace
+            # 2. t -> "Atype | None" : by .__repr__
+
+            temp_type = temp_type.replace('"', "").__repr__()
         return temp_type, imports
     t: str | None = prop.type
     if t == "string":
