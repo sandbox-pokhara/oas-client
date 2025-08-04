@@ -102,7 +102,8 @@ def find_parameters(
                 schema = q.schema_
                 type_str, imps = resolve_type(schema)
                 if not required:
-                    type_str = f"{type_str}|None"
+                    if not type_str.endswith("| None"):
+                        type_str = f"{type_str} | None"
                 fields.append({"name": name, "type": type_str})
                 for i in imps:
                     imports.add(i)
