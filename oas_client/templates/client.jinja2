@@ -10,11 +10,11 @@ class APIClient(httpx.Client):
     def {{ func.func_name }}(self{% if func.params %}, params: {{ func.params }}{% endif %}{% if func.body %}, body: {{ func.body }}{% endif %}{% if func.query %}, query: {{ func.query }} | None = None{% endif %}, **kwargs: Any) -> tuple[httpx.Response, {{ func.return_ }}]:
         url = "{{ func.url }}"
         {% if func.params %}
-        url = url.format(**params.model_dump(exclude_unset=True))
+        url = url.format(**params{%if model_used == "pydantic"%}.model_dump(exclude_unset=True){%endif%})
         {% endif %}
         {% if func.query %}
         if query:
-            url += "?" + urlencode(query.model_dump(exclude_unset=True))
+            url += "?" + urlencode(query{%if model_used == "pydantic"%}.model_dump(exclude_unset=True){%endif%})
         {% endif %}
         res = self.request(
             "{{ func.http_method }}",

@@ -17,7 +17,9 @@ from oas_client.utils import (
 )
 
 
-def find_schemas(spec: OpenAPI, partial: bool = False) -> list[ParserOutput]:
+def find_schemas(
+    spec: OpenAPI, schema_cls_type: str, partial: bool = False
+) -> list[ParserOutput]:
     if not spec.components:
         return []
     schemas = spec.components.schemas
@@ -26,46 +28,27 @@ def find_schemas(spec: OpenAPI, partial: bool = False) -> list[ParserOutput]:
         if isinstance(schema, Reference):
             schema = get_schema_by_reference(spec.components, schema)
         schema_type = schema.type
-
-        imports: set[tuple[str, str]] = set()
-
         if schema_type == "object":
             fields: list[dict[str, str]] = []
-
-            imports.add(("pydantic", "BaseModel"))
             required: set[str] = set(schema.required)
             props = schema.properties
             for prop_name, prop in props.items():
-                type_str, imps = resolve_type(prop)
+                type_str = resolve_type(prop)
+                field = {"name": prop_name}
                 if partial and prop_name not in required:
-                    if not type_str.endswith("| None"):
-                        type_str = f"{type_str} | None"
-                    fields.append(
-                        {
-                            "name": prop_name,
-                            "type": type_str,
-                            "value": "None",
-                        }
-                    )
-                else:
-                    fields.append({"name": prop_name, "type": type_str})
-                for i in imps:
-                    imports.add(i)
-            output.append(
-                ParserOutput(
-                    name=name,
-                    fields=fields,
-                    type="BaseModel",
-                    imports=imports,
-                )
-            )
+                    if schema_cls_type == "BaseModel":
+                        field["value"] = "None"
+                        if not type_str.endswith("| None"):
+                            type_str = f"{type_str} | None"
+                    else:
+                        type_str = f"NotRequired[{type_str}]"
+
+                field["type"] = type_str
+                fields.append(field)
+
+            output.append(ParserOutput(name=name, fields=fields, type=schema_cls_type))
         elif schema_type == "string":
-            imports.add(("typing", "Literal"))
-            output.append(
-                ParserOutput(
-                    name=name, fields=schema.enum, type="Literal", imports=imports
-                )
-            )
+            output.append(ParserOutput(name=name, fields=schema.enum, type="Literal"))
         else:
             raise NotImplementedError(
                 f"Schema type {schema_type} is not implemented. Create an"
@@ -75,7 +58,7 @@ def find_schemas(spec: OpenAPI, partial: bool = False) -> list[ParserOutput]:
 
 
 def find_parameters(
-    spec: OpenAPI, in_filter: Literal["query", "path"]
+    spec: OpenAPI, in_filter: Literal["query", "path"], parameter_cls_type: str
 ) -> list[ParserOutput]:
     output: list[ParserOutput] = []
 
@@ -105,24 +88,22 @@ def find_parameters(
             ]
             if not params:
                 continue
-            imports: set[tuple[str, str]] = set()
             fields: list[dict[str, str]] = []
             for q in params:
                 name = q.name
                 required = q.required
                 schema = q.schema_
-                type_str, imps = resolve_type(schema)
+                type_str = resolve_type(schema)
                 if not required:
                     if not type_str.endswith("| None"):
                         type_str = f"{type_str} | None"
                 fields.append({"name": name, "type": type_str})
-                for i in imps:
-                    imports.add(i)
 
-            imports.add(("pydantic", "BaseModel"))
             output.append(
                 ParserOutput(
-                    name=operation_id, fields=fields, type="BaseModel", imports=imports
+                    name=operation_id,
+                    fields=fields,
+                    type=parameter_cls_type,
                 )
             )
 

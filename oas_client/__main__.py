@@ -7,6 +7,7 @@ from pathlib import Path
 
 import httpx
 
+from oas_client.constants import BASE_IMPORTS, CONDITIONAL_IMPORTS
 from oas_client.openapi import OpenAPI
 from oas_client.renderers.client import render_client
 from oas_client.renderers.params import render_params
@@ -39,6 +40,11 @@ def main():
         help="Disables code formatting (black)",
         action="store_true",
     )
+    parser.add_argument(
+        "--use-pydantic",
+        help="Use pydantic for schema generation inplace of typeddict",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -56,11 +62,19 @@ def main():
     spec = OpenAPI(**spec_json)
     os.makedirs(output_dir, exist_ok=True)
 
-    responses = render_responses(spec, template_dir)
-    requests = render_requests(spec, template_dir)
-    queries = render_queries(spec, template_dir)
-    params = render_params(spec, template_dir)
-    client = render_client(spec, template_dir)
+    model_to_use = "typing"
+    class_to_use = "TypedDict"
+    if args.use_pydantic:
+        model_to_use = "pydantic"
+        class_to_use = "BaseModel"
+    imports: set[tuple[str, str]] = BASE_IMPORTS.union(
+        CONDITIONAL_IMPORTS.get(model_to_use, set())
+    )
+    responses = render_responses(spec, template_dir, imports, class_to_use)
+    requests = render_requests(spec, template_dir, imports, class_to_use)
+    queries = render_queries(spec, template_dir, imports, class_to_use)
+    params = render_params(spec, template_dir, imports, class_to_use)
+    client = render_client(spec, template_dir, model_to_use)
 
     (output_dir / "__init__.py").write_text("")
     (output_dir / "responses.py").write_text(responses)
