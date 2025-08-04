@@ -40,12 +40,23 @@ def find_schemas(spec: OpenAPI, partial: bool = False) -> list[ParserOutput]:
                 if partial and prop_name not in required:
                     if not type_str.endswith("| None"):
                         type_str = f"{type_str} | None"
-                fields.append({"name": prop_name, "type": type_str})
+                    fields.append(
+                        {
+                            "name": prop_name,
+                            "type": type_str,
+                            "value": "None",
+                        }
+                    )
+                else:
+                    fields.append({"name": prop_name, "type": type_str})
                 for i in imps:
                     imports.add(i)
             output.append(
                 ParserOutput(
-                    name=name, fields=fields, type="BaseModel", imports=imports
+                    name=name,
+                    fields=fields,
+                    type="BaseModel",
+                    imports=imports,
                 )
             )
         elif schema_type == "string":

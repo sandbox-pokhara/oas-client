@@ -6,7 +6,8 @@
 class {{ schema.name }}(BaseModel):
 {% if schema.fields %}
 {% for field in schema.fields %}
-    {{ field.name }}: {{ field.type }}
+    {{ field.name }}: {{ field.type }} {% if field.value %} = {{ field.value }} {% endif %}
+
 {% endfor %}
 {% else %}
     pass
