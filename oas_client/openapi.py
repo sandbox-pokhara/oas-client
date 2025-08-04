@@ -83,9 +83,9 @@ class Schema(BaseModel):
     title: str | None = None
     multiple_of: float | None = Field(None, alias="multipleOf")
     maximum: float | None = None
-    exclusive_maximum: bool | None = Field(None, alias="exclusiveMaximum")
+    exclusive_maximum: bool | None | int = Field(None, alias="exclusiveMaximum")
     minimum: float | None = None
-    exclusive_minimum: bool | None = Field(None, alias="exclusiveMinimum")
+    exclusive_minimum: bool | None | int = Field(None, alias="exclusiveMinimum")
     max_length: int | None = Field(None, alias="maxLength", ge=0)
     min_length: int | None = Field(None, alias="minLength", ge=0)
     pattern: str | None = None
