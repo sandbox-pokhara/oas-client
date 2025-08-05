@@ -1,20 +1,23 @@
 from pathlib import Path
-from typing import Any
 
 from jinja2 import Environment, FileSystemLoader
 
+from oas_client.openapi import OpenAPI
 from oas_client.parser import find_parameters
 from oas_client.utils import render_imports, to_pascal_case
 
 
-def render_queries(spec: dict[str, Any], template_dir: Path) -> str:
-    schemas, imports = find_parameters(spec, in_filter="query")
+def render_queries(
+    spec: OpenAPI,
+    template_dir: Path,
+    imports: set[tuple[str, str]],
+    query_cls_type: str,
+) -> str:
+    schemas = find_parameters(
+        spec, in_filter="query", parameter_cls_type=query_cls_type
+    )
     schemas = [
-        {
-            "name": to_pascal_case(s["name"] + "_query"),
-            "fields": s["fields"],
-            "type": s["type"],
-        }
+        s.model_copy(update={"name": to_pascal_case(s.name + "_query")})
         for s in schemas
     ]
     env = Environment(

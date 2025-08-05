@@ -5,21 +5,20 @@ import httpx
 
 from . import params, queries, requests, responses
 
-
 class APIClient(httpx.Client):
     {% for func in functions %}
-    def {{ func.func_name }}(self{% if func.params %}, params: {{ func.params }}{% endif %}{% if func.body %}, body: {{ func.body }}{% endif %}{% if func.query %}, query: {{ func.query }} | None = None{% endif %}, **kwargs: Any) -> tuple[httpx.Response, {{ func.return }}]:
+    def {{ func.func_name }}(self{% if func.params %}, params: {{ func.params }}{% endif %}{% if func.body %}, body: {{ func.body }}{% endif %}{% if func.query %}, query: {{ func.query }} | None = None{% endif %}, **kwargs: Any) -> tuple[httpx.Response, {{ func.return_ }}]:
         url = "{{ func.url }}"
         {% if func.params %}
-        url = url.format(**params)
+        url = url.format(**params{%if model_used == "pydantic"%}.model_dump(exclude_unset=True){%endif%})
         {% endif %}
         {% if func.query %}
         if query:
-            url += "?" + urlencode(query)
+            url += "?" + urlencode(query{%if model_used == "pydantic"%}.model_dump(exclude_unset=True){%endif%})
         {% endif %}
         res = self.request(
             "{{ func.http_method }}",
-            url{% if func.body %}, json=body{% endif %},
+            url{% if func.body %}, json=body{%if model_used == "pydantic"%}.model_dump(exclude_unset=True){%endif%}{% endif %},
             **kwargs
         )
         res.raise_for_status()

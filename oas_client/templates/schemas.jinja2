@@ -2,11 +2,12 @@
 
 
 {% for schema in schemas %}
-{% if schema.type == "TypedDict"%}
-class {{ schema.name }}(TypedDict):
+{% if schema.type == "BaseModel" or schema.type == "TypedDict" %}
+class {{ schema.name }}({% if schema.type == "BaseModel" %} BaseModel {%else%} TypedDict{%endif%}):
 {% if schema.fields %}
 {% for field in schema.fields %}
-    {{ field.name }}: {{ field.type }}
+    {{ field.name }}: {{ field.type }} {% if field.value %} = {{ field.value }} {% endif %}
+
 {% endfor %}
 {% else %}
     pass

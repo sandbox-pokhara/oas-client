@@ -7,6 +7,8 @@ from pathlib import Path
 
 import httpx
 
+from oas_client.constants import BASE_IMPORTS, CONDITIONAL_IMPORTS
+from oas_client.openapi import OpenAPI
 from oas_client.renderers.client import render_client
 from oas_client.renderers.params import render_params
 from oas_client.renderers.queries import render_queries
@@ -38,6 +40,12 @@ def main():
         help="Disables code formatting (black)",
         action="store_true",
     )
+    parser.add_argument(
+        "--mode",
+        help="Chose the base class model to use for generating schemas",
+        default="typeddict",
+        choices=["typeddict", "pydantic"],
+    )
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
@@ -46,19 +54,28 @@ def main():
     if is_url(args.openapi_json):
         res = httpx.get(args.openapi_json, timeout=30)
         res.raise_for_status()
-        spec = res.json()
+        spec_json = res.json()
     else:
         openapi_json = Path(args.openapi_json)
         with open(openapi_json) as f:
-            spec = json.load(f)
+            spec_json = json.load(f)
 
+    spec = OpenAPI(**spec_json)
     os.makedirs(output_dir, exist_ok=True)
 
-    responses = render_responses(spec, template_dir)
-    requests = render_requests(spec, template_dir)
-    queries = render_queries(spec, template_dir)
-    params = render_params(spec, template_dir)
-    client = render_client(spec, template_dir)
+    model_to_use = "typing"
+    class_to_use = "TypedDict"
+    if args.mode == "pydantic":
+        model_to_use = "pydantic"
+        class_to_use = "BaseModel"
+    imports: set[tuple[str, str]] = BASE_IMPORTS.union(
+        CONDITIONAL_IMPORTS.get(model_to_use, set())
+    )
+    responses = render_responses(spec, template_dir, imports, class_to_use)
+    requests = render_requests(spec, template_dir, imports, class_to_use)
+    queries = render_queries(spec, template_dir, imports, class_to_use)
+    params = render_params(spec, template_dir, imports, class_to_use)
+    client = render_client(spec, template_dir, model_to_use)
 
     (output_dir / "__init__.py").write_text("")
     (output_dir / "responses.py").write_text(responses)
