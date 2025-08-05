@@ -8,5 +8,5 @@ BASE_IMPORTS = set(
 )
 CONDITIONAL_IMPORTS: dict[Literal["pydantic", "typing"], set[tuple[str, str]]] = {
     "pydantic": set([("pydantic", "BaseModel")]),
-    "typing": set([("typing", "TypedDict"), ("typing", "NotRequired")]),
+    "typing": set([("typing_extensions", "TypedDict"), ("typing", "NotRequired")]),
 }
