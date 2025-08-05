@@ -94,10 +94,16 @@ def find_parameters(
                 required = q.required
                 schema = q.schema_
                 type_str = resolve_type(schema)
+                field = {"name": name}
                 if not required:
-                    if not type_str.endswith("| None"):
-                        type_str = f"{type_str} | None"
-                fields.append({"name": name, "type": type_str})
+                    if parameter_cls_type == "BaseModel":
+                        field["value"] = "None"
+                        if not type_str.endswith("| None"):
+                            type_str = f"{type_str} | None"
+                    else:
+                        type_str = f"NotRequired[{type_str}]"
+                field["type"] = type_str
+                fields.append(field)
 
             output.append(
                 ParserOutput(
