@@ -15,7 +15,7 @@ def render_responses(
     imports: set[tuple[str, str]],
     schema_cls_type: str,
 ) -> str:
-    schemas = find_schemas(spec, partial=True, schema_cls_type=schema_cls_type)
+    schemas = find_schemas(spec, partial=False, schema_cls_type=schema_cls_type)
     # render necessary schemas only
     response_schemas = traverse_path_methods_get(spec, "response")
     schemas_new: list[ParserOutput] = []
