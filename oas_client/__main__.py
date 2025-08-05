@@ -41,10 +41,10 @@ def main():
         action="store_true",
     )
     parser.add_argument(
-        "--schema-class",
+        "--mode",
         help="Chose the base class model to use for generating schemas",
-        default="typing",
-        choices=["typing", "pydantic"],
+        default="typeddict",
+        choices=["typeddict", "pydantic"],
     )
     args = parser.parse_args()
 
@@ -65,7 +65,7 @@ def main():
 
     model_to_use = "typing"
     class_to_use = "TypedDict"
-    if args.schema_class == "pydantic":
+    if args.mode == "pydantic":
         model_to_use = "pydantic"
         class_to_use = "BaseModel"
     imports: set[tuple[str, str]] = BASE_IMPORTS.union(
